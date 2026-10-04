@@ -161,9 +161,6 @@
         </div>
         <p class="muted center" id="motionHint" style="margin:10px 0 0"></p>
       </div>
-      <p class="center" style="margin-top:14px">
-        <a class="linkbtn" id="demoBtn" href="#">+100 걸음 (테스트)</a>
-      </p>
     </section>
 
     <!-- DEX -->
@@ -486,7 +483,6 @@ document.getElementById('startBtn').onclick=startWalk;
 document.getElementById('stopBtn').onclick=stopWalk;
 document.getElementById('snackBtn').onclick=useSnack;
 document.getElementById('pickBtn').onclick=()=>switchTab('dex');
-document.getElementById('demoBtn').onclick=(e)=>{e.preventDefault(); addSteps(100);};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
 
 /* ---------- 첫 실행: 피카츄(25) 선물 ---------- */
