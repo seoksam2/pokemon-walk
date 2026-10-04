@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#2b6cb0">
+<title>포켓몬 워크</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%23ef4444'/%3E%3Crect y='46' width='100' height='8' fill='%23111'/%3E%3Ccircle cx='50' cy='50' r='14' fill='%23fff' stroke='%23111' stroke-width='6'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#0f1420; --card:#1b2233; --card2:#232c42; --line:#2c3650;
+    --txt:#eef2ff; --muted:#9aa6c4; --accent:#4f8cff; --accent2:#22c55e;
+    --red:#ef4444; --yellow:#f6c343; --xp:#7c5cff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Segoe UI",sans-serif;
+    background:var(--bg); color:var(--txt);
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    overscroll-behavior:none; -webkit-user-select:none; user-select:none;
+  }
+  .wrap{max-width:460px; margin:0 auto; min-height:100%; display:flex; flex-direction:column}
+
+  /* ---- top status ---- */
+  header{padding:14px 16px 10px; position:sticky; top:0; background:linear-gradient(180deg,#131a2b,#0f1420); z-index:5}
+  .row{display:flex; align-items:center; gap:10px}
+  .lvlbadge{background:var(--accent); color:#fff; font-weight:800; border-radius:12px; padding:6px 12px; font-size:15px}
+  .steps{font-size:28px; font-weight:800; letter-spacing:.5px}
+  .steps small{font-size:13px; color:var(--muted); font-weight:600}
+  .xpbar{height:10px; background:#111a2e; border-radius:8px; margin-top:10px; overflow:hidden; border:1px solid var(--line)}
+  .xpfill{height:100%; width:0%; background:linear-gradient(90deg,var(--xp),#a78bff); transition:width .4s}
+  .xptxt{font-size:11px; color:var(--muted); margin-top:4px}
+
+  /* ---- warning banner ---- */
+  #banner{display:none; background:#3a2a00; color:#ffdf8a; border:1px solid #6b5200;
+    margin:10px 16px 0; padding:10px 12px; border-radius:12px; font-size:12.5px; line-height:1.5}
+  #banner.show{display:block; animation:pop .3s}
+  @keyframes pop{from{transform:scale(.96);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* ---- main ---- */
+  main{flex:1; padding:10px 16px 90px}
+  .card{background:var(--card); border:1px solid var(--line); border-radius:18px; padding:16px; margin-top:12px}
+  .title{font-size:13px; color:var(--muted); font-weight:700; margin-bottom:10px; text-transform:uppercase; letter-spacing:.5px}
+
+  /* companion */
+  .buddy{display:flex; flex-direction:column; align-items:center; gap:6px}
+  .sprite{width:150px; height:150px; image-rendering:pixelated; image-rendering:crisp-edges;
+    filter:drop-shadow(0 8px 10px rgba(0,0,0,.5))}
+  .walking .sprite{animation:bob .6s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-10px) rotate(2deg)}}
+  .buddyname{font-size:18px; font-weight:800}
+  .abil{font-size:12px; color:var(--yellow); font-weight:700}
+  .hpwrap{width:100%; margin-top:6px}
+  .hpbar{height:14px; background:#111a2e; border-radius:8px; overflow:hidden; border:1px solid var(--line)}
+  .hpfill{height:100%; background:linear-gradient(90deg,#16a34a,#22c55e); transition:width .3s, background .3s}
+  .hptxt{display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-top:3px}
+  .tired{color:var(--red)!important; font-weight:800}
+
+  /* multiplier chip */
+  #multi{display:none; margin-top:10px; text-align:center; font-weight:800; color:#fff;
+    background:linear-gradient(90deg,#f6c343,#ef4444); border-radius:12px; padding:8px; font-size:14px}
+  #multi.show{display:block; animation:pop .3s}
+
+  .btn{border:0; border-radius:14px; padding:13px; font-size:15px; font-weight:800; width:100%;
+    background:var(--accent); color:#fff; cursor:pointer; transition:transform .1s, opacity .2s}
+  .btn:active{transform:scale(.97)}
+  .btn.ghost{background:var(--card2); color:var(--txt); border:1px solid var(--line)}
+  .btn.green{background:var(--accent2)}
+  .btn:disabled{opacity:.4}
+  .btnrow{display:flex; gap:8px; margin-top:10px}
+
+  /* grids */
+  .grid{display:grid; grid-template-columns:repeat(4,1fr); gap:8px}
+  .cell{background:var(--card2); border:1px solid var(--line); border-radius:14px; aspect-ratio:1;
+    display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; cursor:pointer}
+  .cell img{width:80%; height:80%; image-rendering:pixelated}
+  .cell.locked img{filter:brightness(0) saturate(0); opacity:.35}
+  .cell .no{position:absolute; top:3px; left:5px; font-size:9px; color:var(--muted)}
+  .cell.buddysel{outline:3px solid var(--yellow)}
+  .cell .heart{position:absolute; bottom:3px; right:4px; font-size:9px}
+
+  /* items */
+  .item{display:flex; align-items:center; gap:12px; background:var(--card2); border:1px solid var(--line);
+    border-radius:14px; padding:12px; margin-top:8px}
+  .item .emoji{font-size:28px}
+  .item .meta{flex:1}
+  .item .nm{font-weight:800; font-size:15px}
+  .item .ds{font-size:11.5px; color:var(--muted)}
+  .item .cnt{font-weight:800; font-size:14px; background:#111a2e; border-radius:10px; padding:4px 10px}
+  .item .use{border:0; border-radius:10px; padding:8px 12px; font-weight:800; background:var(--accent); color:#fff}
+  .item .use:disabled{opacity:.35}
+
+  /* tabbar */
+  nav{position:fixed; bottom:0; left:0; right:0; background:#131a2bdd; backdrop-filter:blur(12px);
+    border-top:1px solid var(--line); display:flex; max-width:460px; margin:0 auto;
+    padding-bottom:env(safe-area-inset-bottom)}
+  nav button{flex:1; background:0; border:0; color:var(--muted); padding:11px 0 10px; font-size:11px; font-weight:700; cursor:pointer}
+  nav button .ic{font-size:22px; display:block}
+  nav button.on{color:var(--accent)}
+
+  .page{display:none}
+  .page.on{display:block}
+
+  /* toast / catch modal */
+  #toast{position:fixed; left:50%; top:70px; transform:translateX(-50%) translateY(-20px);
+    background:#000c; border:1px solid var(--line); padding:10px 16px; border-radius:14px;
+    font-weight:700; font-size:13px; opacity:0; pointer-events:none; transition:.3s; z-index:50; max-width:90%}
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+
+  #modal{position:fixed; inset:0; background:#000a; display:none; align-items:center; justify-content:center; z-index:60; padding:24px}
+  #modal.show{display:flex}
+  .mbox{background:var(--card); border:1px solid var(--line); border-radius:22px; padding:24px; text-align:center; max-width:320px; width:100%; animation:pop .3s}
+  .mbox img{width:140px; height:140px; image-rendering:pixelated; animation:catchspin .7s ease-out}
+  @keyframes catchspin{0%{transform:scale(0) rotate(-180deg); opacity:0}60%{transform:scale(1.15) rotate(10deg)}100%{transform:scale(1) rotate(0)}}
+  .sparkle{font-size:30px; animation:bob .8s infinite}
+  .muted{color:var(--muted); font-size:12px}
+  .center{text-align:center}
+  a.linkbtn{color:var(--accent); font-size:12px; text-decoration:underline}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="row" style="justify-content:space-between">
+      <span class="lvlbadge">Lv <span id="lvl">1</span></span>
+      <div class="center">
+        <div class="steps"><span id="stepNum">0</span> <small>걸음</small></div>
+      </div>
+      <span style="width:52px; text-align:right; font-size:11px; color:var(--muted)" id="todayLbl">총</span>
+    </div>
+    <div class="xpbar"><div class="xpfill" id="xpfill"></div></div>
+    <div class="xptxt">다음 레벨까지 <b id="toNext">0</b> 걸음 · 총 <span id="totalSteps">0</span></div>
+  </header>
+
+  <div id="banner">⚠️ <b>걸음 측정 중</b> — 이 화면을 벗어나거나 앱을 닫으면 걸음이 <u>기록되지 않습니다</u>. 화면을 켜 둔 채로 걸어주세요.</div>
+
+  <main>
+    <!-- HOME -->
+    <section class="page on" id="page-home">
+      <div class="card">
+        <div class="buddy" id="buddyBox">
+          <img class="sprite" id="buddySprite" alt="">
+          <div class="buddyname" id="buddyName">동행 포켓몬 없음</div>
+          <div class="abil" id="buddyAbil"></div>
+          <div class="hpwrap">
+            <div class="hpbar"><div class="hpfill" id="hpfill"></div></div>
+            <div class="hptxt"><span>체력</span><span id="hptxt">—</span></div>
+          </div>
+        </div>
+        <div id="multi"></div>
+        <div class="btnrow">
+          <button class="btn green" id="startBtn">걷기 시작</button>
+          <button class="btn ghost" id="stopBtn" style="display:none">중지</button>
+        </div>
+        <div class="btnrow">
+          <button class="btn ghost" id="snackBtn">🍪 간식 주기</button>
+          <button class="btn ghost" id="pickBtn">동행 선택</button>
+        </div>
+        <p class="muted center" id="motionHint" style="margin:10px 0 0"></p>
+      </div>
+      <p class="center" style="margin-top:14px">
+        <a class="linkbtn" id="demoBtn" href="#">+100 걸음 (테스트)</a>
+      </p>
+    </section>
+
+    <!-- DEX -->
+    <section class="page" id="page-dex">
+      <div class="card">
+        <div class="title">도감 <span id="dexCount" style="color:var(--accent2)"></span></div>
+        <div class="grid" id="dexGrid"></div>
+        <p class="muted center" style="margin-top:12px">레벨업 하면 야생 포켓몬을 랜덤으로 만나요. 칸을 누르면 동행으로 지정됩니다.</p>
+      </div>
+    </section>
+
+    <!-- ITEMS -->
+    <section class="page" id="page-items">
+      <div class="card">
+        <div class="title">가방</div>
+        <div id="itemList"></div>
+      </div>
+      <div class="card">
+        <div class="title">보상</div>
+        <p class="muted" id="rewardInfo"></p>
+      </div>
+    </section>
+  </main>
+
+  <nav>
+    <button class="on" data-tab="home"><span class="ic">🏠</span>홈</button>
+    <button data-tab="dex"><span class="ic">📘</span>도감</button>
+    <button data-tab="items"><span class="ic">🎒</span>가방</button>
+  </nav>
+</div>
+
+<div id="toast"></div>
+<div id="modal"><div class="mbox" id="mbox"></div></div>
+
+<script>
+"use strict";
+/* =========================================================================
+   포켓몬 워크 — 단일 파일 웹앱 (PWA)
+   - 걸음: DeviceMotion 가속도센서 피크검출 (화면 켜져 있을 때만)
+   - 수집: 레벨업 시 랜덤 확률로 포켓몬 조우/포획
+   - 이미지: PokeAPI 스프라이트(github raw) / 한글이름: PokeAPI species(ko)
+   ========================================================================= */
+
+const SPRITE = id => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;
+const DEX_MAX = 151;                 // 1세대 칸토
+const STEPS_PER_LEVEL = base => 1000 + base*500; // 레벨마다 요구량 증가
+const NOTIFY_EVERY = 1000;           // 1000걸음마다 알림
+
+// 능력 풀 (포획 시 랜덤 배정)
+const ABILITIES = [
+  {key:'x2',    name:'튼튼한다리',  desc:'걸음 x2',         mult:2},
+  {key:'x15',   name:'빠른발',      desc:'걸음 x1.5',       mult:1.5},
+  {key:'xp',    name:'노력가',      desc:'포획 성공률 UP',  xp:1.3},
+  {key:'stam',  name:'끈기',        desc:'체력 천천히 닳음', stam:0.5},
+  {key:'none',  name:'평범함',      desc:'특별한 능력 없음'},
+];
+
+const DEFAULT = {
+  total:0, level:1, lastNotify:0,
+  owned:{},            // id -> {ability, hp}
+  buddy:null,          // id
+  names:{},            // id -> 한글이름 캐시
+  items:{snack:3, boost:1}, // 간식, x3 부스터
+  boostUntil:0,
+};
+
+let S = load();
+function load(){ try{ return Object.assign({}, DEFAULT, JSON.parse(localStorage.getItem('pw')||'{}')); }catch(e){ return {...DEFAULT}; } }
+function save(){ localStorage.setItem('pw', JSON.stringify(S)); }
+
+/* ---------- 레벨 계산 ---------- */
+function stepsForLevel(l){ return STEPS_PER_LEVEL(l-1); }           // 그 레벨을 올리는 데 필요한 걸음
+function levelFloorSteps(){ let acc=0; for(let l=1;l<S.level;l++) acc+=stepsForLevel(l); return acc; }
+function recomputeLevel(){
+  while(true){
+    const need = levelFloorSteps()+stepsForLevel(S.level);
+    if(S.total >= need){ S.level++; onLevelUp(); } else break;
+  }
+}
+
+/* ---------- 걸음 추가 (핵심) ---------- */
+function addSteps(raw){
+  if(raw<=0) return;
+  const buddy = S.buddy!=null && S.owned[S.buddy];
+  let mult = 1;
+  const ab = buddy && ABILITIES.find(a=>a.key===buddy.ability);
+  if(buddy && buddy.hp>0 && ab && ab.mult) mult *= ab.mult;        // 동행 능력 (체력>0일 때만)
+  if(Date.now() < S.boostUntil) mult *= 3;                          // 부스터 아이템
+  const gained = Math.round(raw*mult);
+
+  const before = S.total;
+  S.total += gained;
+
+  // 체력 소모
+  if(buddy && buddy.hp>0){
+    const drainMul = (ab && ab.stam) ? ab.stam : 1;
+    buddy.hp = Math.max(0, buddy.hp - raw*0.04*drainMul);          // 25걸음당 ~1
+  }
+
+  recomputeLevel();
+
+  // 1000걸음마다 알림
+  const crossed = Math.floor(S.total/NOTIFY_EVERY) - Math.floor(before/NOTIFY_EVERY);
+  if(crossed>0) notifyMilestone();
+
+  save(); render();
+}
+
+/* ---------- 레벨업 → 보상 + 랜덤 조우 ---------- */
+function onLevelUp(){
+  S.items.snack = (S.items.snack||0)+1;
+  if(S.level%5===0) S.items.boost=(S.items.boost||0)+1;
+  if(Math.random()<0.6){
+    const buddy = S.buddy!=null && S.owned[S.buddy];
+    const ab = buddy && ABILITIES.find(a=>a.key===buddy.ability);
+    encounterWild(ab&&ab.xp?ab.xp:1);
+  } else {
+    toast(`🎉 레벨 ${S.level} 달성! 간식 +1`);
+  }
+}
+
+function encounterWild(xpMul){
+  const pool=[]; for(let i=1;i<=DEX_MAX;i++) if(!S.owned[i]) pool.push(i);
+  const list = pool.length?pool:Array.from({length:DEX_MAX},(_,i)=>i+1);
+  const id = list[Math.floor(Math.random()*list.length)];
+  const success = Math.random() < Math.min(0.95, 0.72*xpMul);
+  fetchName(id).then(nm=>{
+    if(success){
+      if(!S.owned[id]){
+        const ability = ABILITIES[Math.floor(Math.random()*ABILITIES.length)].key;
+        S.owned[id] = {ability, hp:100};
+        if(S.buddy==null) S.buddy=id;
+      }
+      save(); showCatch(id, nm, true); renderDex();
+    } else {
+      showCatch(id, nm, false);
+    }
+  });
+}
+
+/* ---------- 한글 이름 (PokeAPI species, 캐시) ---------- */
+async function fetchName(id){
+  if(S.names[id]) return S.names[id];
+  try{
+    const r = await fetch(`https://pokeapi.co/api/v2/pokemon-species/${id}`);
+    const j = await r.json();
+    const ko = (j.names||[]).find(n=>n.language.name==='ko');
+    const nm = ko ? ko.name : (j.name||('#'+id));
+    S.names[id]=nm; save(); return nm;
+  }catch(e){ return '포켓몬 #'+id; }
+}
+
+/* ---------- 알림 ---------- */
+function notifyMilestone(){
+  const toNext = nextInfo().remain;
+  const msg = `지금까지 ${S.total.toLocaleString()}걸음! 다음 레벨까지 ${toNext.toLocaleString()}걸음`;
+  toast('🔔 '+msg);
+  if('Notification' in window && Notification.permission==='granted'){
+    try{ new Notification('포켓몬 워크', {body:msg, icon:SPRITE(S.buddy||25)}); }catch(e){}
+  }
+}
+
+/* ---------- 걸음 센서 ---------- */
+let running=false, lastPeak=0, lastDyn=0, filtered=0;
+function onMotion(e){
+  const a = e.accelerationIncludingGravity || e.acceleration; if(!a) return;
+  const mag = Math.sqrt((a.x||0)**2+(a.y||0)**2+(a.z||0)**2);
+  filtered = filtered*0.8 + mag*0.2;            // 저주파(중력) 제거
+  const dyn = mag - filtered;
+  const now = Date.now();
+  if(dyn>1.2 && lastDyn<=1.2 && now-lastPeak>250){ lastPeak=now; addSteps(1); } // 피크+디바운스
+  lastDyn=dyn;
+}
+
+async function startWalk(){
+  if(typeof DeviceMotionEvent!=='undefined' && typeof DeviceMotionEvent.requestPermission==='function'){
+    try{ const p=await DeviceMotionEvent.requestPermission(); if(p!=='granted') hint('모션 센서 권한이 거부되어 자동 걸음측정을 못 합니다. 아래 테스트 버튼으로 확인하세요.'); }
+    catch(e){ hint('이 브라우저에서 모션 권한 요청 실패.'); }
+  }
+  if('Notification' in window && Notification.permission==='default'){ try{ await Notification.requestPermission(); }catch(e){} }
+  window.addEventListener('devicemotion', onMotion);
+  running=true;
+  document.getElementById('banner').classList.add('show');
+  document.getElementById('buddyBox').classList.add('walking');
+  document.getElementById('startBtn').style.display='none';
+  document.getElementById('stopBtn').style.display='block';
+  keepAwake();
+}
+function stopWalk(){
+  window.removeEventListener('devicemotion', onMotion);
+  running=false;
+  document.getElementById('banner').classList.remove('show');
+  document.getElementById('buddyBox').classList.remove('walking');
+  document.getElementById('startBtn').style.display='block';
+  document.getElementById('stopBtn').style.display='none';
+  releaseWake();
+}
+
+// 화면 꺼짐 방지
+let wakeLock=null;
+async function keepAwake(){ try{ if('wakeLock' in navigator) wakeLock=await navigator.wakeLock.request('screen'); }catch(e){} }
+function releaseWake(){ try{ wakeLock&&wakeLock.release(); wakeLock=null; }catch(e){} }
+document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'&&running) keepAwake(); });
+
+/* ---------- 아이템 ---------- */
+function useSnack(){
+  if((S.items.snack||0)<=0){ toast('간식이 없어요'); return; }
+  const b = S.buddy!=null && S.owned[S.buddy];
+  if(!b){ toast('동행 포켓몬을 먼저 선택하세요'); return; }
+  if(b.hp>=100){ toast('이미 체력이 가득해요'); return; }
+  S.items.snack--; b.hp=Math.min(100,b.hp+40);
+  save(); render(); toast('🍪 냠냠! 체력 +40');
+}
+function useBoost(){
+  if((S.items.boost||0)<=0){ toast('부스터가 없어요'); return; }
+  S.items.boost--; S.boostUntil=Date.now()+5*60*1000;
+  save(); render(); toast('⚡ 5분간 걸음 x3!');
+}
+
+/* ---------- UI 렌더 ---------- */
+function nextInfo(){
+  const floor=levelFloorSteps(); const need=stepsForLevel(S.level);
+  const into=S.total-floor; const remain=Math.max(0,need-into);
+  return {into, need, remain, pct:Math.min(100,into/need*100)};
+}
+function render(){
+  const ni=nextInfo();
+  document.getElementById('lvl').textContent=S.level;
+  document.getElementById('stepNum').textContent=S.total.toLocaleString();
+  document.getElementById('totalSteps').textContent=S.total.toLocaleString();
+  document.getElementById('toNext').textContent=ni.remain.toLocaleString();
+  document.getElementById('xpfill').style.width=ni.pct+'%';
+
+  const b=S.buddy!=null&&S.owned[S.buddy];
+  const sp=document.getElementById('buddySprite');
+  if(b){
+    sp.src=SPRITE(S.buddy); sp.style.visibility='visible';
+    fetchName(S.buddy).then(n=>document.getElementById('buddyName').textContent=n);
+    const ab=ABILITIES.find(a=>a.key===b.ability);
+    document.getElementById('buddyAbil').textContent='✨ '+(ab?ab.name+' · '+ab.desc:'');
+    const hp=Math.round(b.hp);
+    document.getElementById('hpfill').style.width=hp+'%';
+    document.getElementById('hpfill').style.background = hp<25?'linear-gradient(90deg,#b91c1c,#ef4444)':'linear-gradient(90deg,#16a34a,#22c55e)';
+    const ht=document.getElementById('hptxt'); ht.textContent=hp+' / 100'+(hp<25?' (지쳤어요!)':'');
+    ht.className=hp<25?'tired':'';
+  }else{
+    sp.style.visibility='hidden';
+    document.getElementById('buddyName').textContent='동행 포켓몬 없음';
+    document.getElementById('buddyAbil').textContent='레벨업으로 포켓몬을 모아보세요';
+    document.getElementById('hpfill').style.width='0%';
+    document.getElementById('hptxt').textContent='—';
+  }
+
+  const m=document.getElementById('multi');
+  const left=S.boostUntil-Date.now();
+  if(left>0){ m.classList.add('show'); m.textContent=`⚡ x3 부스터 ${Math.ceil(left/1000)}초`; }
+  else m.classList.remove('show');
+
+  renderItems();
+}
+
+function renderDex(){
+  const g=document.getElementById('dexGrid'); g.innerHTML='';
+  let cnt=0;
+  for(let i=1;i<=DEX_MAX;i++){
+    const have=!!S.owned[i]; if(have)cnt++;
+    const c=document.createElement('div');
+    c.className='cell'+(have?'':' locked')+(S.buddy===i?' buddysel':'');
+    c.innerHTML=`<span class="no">#${i}</span><img loading="lazy" src="${SPRITE(i)}">`+
+      (have?`<span class="heart">${S.owned[i].hp<25?'💤':'❤️'}</span>`:'');
+    if(have) c.onclick=()=>{ S.buddy=i; save(); render(); renderDex(); fetchName(i).then(n=>toast('동행: '+n)); switchTab('home'); };
+    g.appendChild(c);
+  }
+  document.getElementById('dexCount').textContent=`${cnt} / ${DEX_MAX}`;
+}
+
+function renderItems(){
+  const el=document.getElementById('itemList');
+  const defs=[
+    {k:'snack', e:'🍪', nm:'간식', ds:'동행 체력 +40 회복', cnt:S.items.snack||0, use:useSnack},
+    {k:'boost', e:'⚡', nm:'x3 부스터', ds:'5분간 걸음 3배', cnt:S.items.boost||0, use:useBoost},
+  ];
+  el.innerHTML='';
+  defs.forEach(d=>{
+    const row=document.createElement('div'); row.className='item';
+    row.innerHTML=`<span class="emoji">${d.e}</span><div class="meta"><div class="nm">${d.nm}</div><div class="ds">${d.ds}</div></div><span class="cnt">x${d.cnt}</span>`;
+    const btn=document.createElement('button'); btn.className='use'; btn.textContent='사용'; btn.disabled=d.cnt<=0;
+    btn.onclick=d.use; row.appendChild(btn); el.appendChild(row);
+  });
+  document.getElementById('rewardInfo').innerHTML=
+    '• 레벨업마다 <b>간식 +1</b><br>• 5레벨마다 <b>부스터 +1</b><br>• 레벨업 시 60% 확률로 <b>야생 포켓몬</b> 조우';
+}
+
+/* ---------- 조우 모달 ---------- */
+function showCatch(id,nm,ok){
+  const mb=document.getElementById('mbox');
+  mb.innerHTML = ok
+    ? `<div class="sparkle">✨</div><img src="${SPRITE(id)}"><h2 style="margin:8px 0 2px">${nm} 포획!</h2><p class="muted">도감 #${id} 에 등록되었어요</p><button class="btn" id="mok">좋아!</button>`
+    : `<img src="${SPRITE(id)}" style="filter:grayscale(.3)"><h2 style="margin:8px 0 2px">${nm}</h2><p class="muted">앗! 놓쳤다... 다음 레벨에 또 만나요</p><button class="btn ghost" id="mok">아쉽</button>`;
+  document.getElementById('modal').classList.add('show');
+  document.getElementById('mok').onclick=closeModal;
+}
+function closeModal(){ document.getElementById('modal').classList.remove('show'); }
+
+/* ---------- 탭 ---------- */
+function switchTab(t){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.getElementById('page-'+t).classList.add('on');
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.tab===t));
+  if(t==='dex') renderDex();
+}
+
+/* ---------- 토스트/힌트 ---------- */
+let toastT;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+function hint(m){ document.getElementById('motionHint').textContent=m; }
+
+/* ---------- 바인딩 ---------- */
+document.getElementById('startBtn').onclick=startWalk;
+document.getElementById('stopBtn').onclick=stopWalk;
+document.getElementById('snackBtn').onclick=useSnack;
+document.getElementById('pickBtn').onclick=()=>switchTab('dex');
+document.getElementById('demoBtn').onclick=(e)=>{e.preventDefault(); addSteps(100);};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>switchTab(b.dataset.tab));
+
+/* ---------- 첫 실행: 피카츄(25) 선물 ---------- */
+if(Object.keys(S.owned).length===0){
+  S.owned[25]={ability:'x2', hp:100}; S.buddy=25; save(); fetchName(25);
+}
+
+/* ---------- 부스터 카운트다운 ---------- */
+setInterval(()=>{ if(S.boostUntil>Date.now()||document.getElementById('multi').classList.contains('show')) render(); },1000);
+
+render(); renderDex();
+</script>
+</body>
+</html>
